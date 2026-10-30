@@ -485,8 +485,7 @@ class WaveManager {
                     val isBossOrChamp =
                         role == WaveMobRole.CHAMPION ||
                             role == WaveMobRole.BLAZE_CHAMPION ||
-                            role == WaveMobRole.WITCH_CHAMPION ||
-                            WaveDefenseGame.isBossWave(game.currentWave)
+                            role == WaveMobRole.WITCH_CHAMPION
                     val candyAmount = if (isBossOrChamp) 200 else HalloweenEvent.config.mobCandyDrop
                     val newBal = HalloweenEvent.balanceManager?.addCandies(killer, candyAmount, sendActionBar = false) ?: 0
                     val timeLeft =

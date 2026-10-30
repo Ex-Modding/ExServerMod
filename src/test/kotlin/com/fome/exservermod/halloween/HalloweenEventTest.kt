@@ -209,4 +209,56 @@ class HalloweenEventTest {
         assertTrue(targetX < playerX, "Should be to the right of player (lower X when facing south)")
         assertEquals(65.97, targetY, 0.01)
     }
+
+    @Test
+    fun testWaveMobCandyRewardLogic() {
+        val config = HalloweenConfig()
+
+        fun computeCandy(role: com.fome.exservermod.waves.WaveMobRole): Int {
+            val isBossOrChamp =
+                role == com.fome.exservermod.waves.WaveMobRole.CHAMPION ||
+                    role == com.fome.exservermod.waves.WaveMobRole.BLAZE_CHAMPION ||
+                    role == com.fome.exservermod.waves.WaveMobRole.WITCH_CHAMPION
+            return if (isBossOrChamp) 200 else config.mobCandyDrop
+        }
+
+        // Standard mob in boss wave should still give standard candy drop (3), NOT 200!
+        assertEquals(3, computeCandy(com.fome.exservermod.waves.WaveMobRole.STANDARD))
+        assertEquals(3, computeCandy(com.fome.exservermod.waves.WaveMobRole.GHOST_CREEPER))
+        assertEquals(3, computeCandy(com.fome.exservermod.waves.WaveMobRole.SPECTRAL_VEX))
+
+        // Only champions give 200 candies
+        assertEquals(200, computeCandy(com.fome.exservermod.waves.WaveMobRole.CHAMPION))
+        assertEquals(200, computeCandy(com.fome.exservermod.waves.WaveMobRole.BLAZE_CHAMPION))
+        assertEquals(200, computeCandy(com.fome.exservermod.waves.WaveMobRole.WITCH_CHAMPION))
+    }
+
+    @Test
+    fun testBossCustomTexturesMatching() {
+        val witch =
+            com.fome.exservermod.client.BossCustomTextures
+                .getBossTexture("Верховная Ведьма Шабаша")
+        assertEquals(com.fome.exservermod.client.BossCustomTextures.WITCH_QUEEN, witch)
+
+        val incinerator =
+            com.fome.exservermod.client.BossCustomTextures
+                .getBossTexture("Пламенный Чемпион")
+        assertEquals(com.fome.exservermod.client.BossCustomTextures.INCINERATOR, incinerator)
+
+        val dread =
+            com.fome.exservermod.client.BossCustomTextures
+                .getBossTexture("Рыцарь Преисподней")
+        assertEquals(com.fome.exservermod.client.BossCustomTextures.DREAD_CHAMPION, dread)
+
+        // Normal blaze or witch should NOT match
+        val normalBlaze =
+            com.fome.exservermod.client.BossCustomTextures
+                .getBossTexture("Blaze")
+        kotlin.test.assertNull(normalBlaze)
+
+        val normalWitch =
+            com.fome.exservermod.client.BossCustomTextures
+                .getBossTexture("Witch")
+        kotlin.test.assertNull(normalWitch)
+    }
 }

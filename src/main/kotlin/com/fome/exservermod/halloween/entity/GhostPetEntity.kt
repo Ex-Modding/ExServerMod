@@ -1,6 +1,6 @@
 package com.fome.exservermod.halloween.entity
 
-import net.minecraft.core.BlockPos
+import net.minecraft.ChatFormatting
 import net.minecraft.core.particles.DustParticleOptions
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.chat.Component
@@ -16,10 +16,7 @@ import net.minecraft.world.entity.MoverType
 import net.minecraft.world.entity.animal.allay.Allay
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.block.LightBlock
 import net.minecraft.world.level.levelgen.Heightmap
-import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
@@ -34,7 +31,6 @@ class GhostPetEntity(
     var ownerUuid: UUID? = null
     var isWaiting: Boolean = false
     private var waitAnchorPos: Vec3? = null
-    private var lightPos: BlockPos? = null
 
     init {
         noPhysics = true
@@ -61,11 +57,15 @@ class GhostPetEntity(
                 waitAnchorPos = Vec3(x, waitY, z)
                 setPos(x, waitY, z)
                 setDeltaMovement(Vec3.ZERO)
-                player.sendOverlayMessage(Component.literal("§bПризрак ждет вас на этом месте"))
+                player.sendOverlayMessage(
+                    Component.translatable("exservermod.halloween.ghost_waiting").withStyle(ChatFormatting.AQUA),
+                )
                 sLevel?.playSound(null, x, y, z, SoundEvents.ALLAY_ITEM_TAKEN, SoundSource.NEUTRAL, 1.2f, 1.5f)
             } else {
                 waitAnchorPos = null
-                player.sendOverlayMessage(Component.literal("§bПризрак снова следует за вами!"))
+                player.sendOverlayMessage(
+                    Component.translatable("exservermod.halloween.ghost_following").withStyle(ChatFormatting.AQUA),
+                )
                 sLevel?.playSound(null, x, y, z, SoundEvents.ALLAY_AMBIENT_WITHOUT_ITEM, SoundSource.NEUTRAL, 1.2f, 1.3f)
             }
             return InteractionResult.SUCCESS
@@ -93,43 +93,6 @@ class GhostPetEntity(
         super.addAdditionalSaveData(output)
         output.putString("OwnerUuid", ownerUuid?.toString() ?: "")
         output.putBoolean("IsWaiting", isWaiting)
-    }
-
-    private fun updateLight(
-        sLevel: ServerLevel,
-        targetPos: BlockPos,
-    ) {
-        if (lightPos != targetPos) {
-            removeLight(sLevel)
-            val currentState = sLevel.getBlockState(targetPos)
-            val isWater = sLevel.getFluidState(targetPos).type == Fluids.WATER || currentState.block == Blocks.WATER
-            if (currentState.isAir || isWater || currentState.`is`(Blocks.LIGHT)) {
-                val lightState =
-                    Blocks.LIGHT
-                        .defaultBlockState()
-                        .setValue(LightBlock.LEVEL, 10)
-                        .setValue(LightBlock.WATERLOGGED, isWater)
-                sLevel.setBlockAndUpdate(targetPos, lightState)
-                lightPos = targetPos
-            }
-        }
-    }
-
-    fun removeLight(sLevel: ServerLevel? = null) {
-        val pos = lightPos ?: return
-        val lvl = sLevel ?: (level() as? ServerLevel) ?: return
-        val state = lvl.getBlockState(pos)
-        if (state.`is`(Blocks.LIGHT)) {
-            val isWaterlogged = state.getValue(LightBlock.WATERLOGGED)
-            val replacement = if (isWaterlogged) Blocks.WATER.defaultBlockState() else Blocks.AIR.defaultBlockState()
-            lvl.setBlockAndUpdate(pos, replacement)
-        }
-        lightPos = null
-    }
-
-    override fun remove(reason: RemovalReason) {
-        removeLight()
-        super.remove(reason)
     }
 
     override fun tick() {
@@ -211,7 +174,6 @@ class GhostPetEntity(
 
             yRot = (yRot + 0.5f) % 360.0f
             yHeadRot = yRot
-            updateLight(sLevel, blockPosition())
             return
         }
 
@@ -221,18 +183,15 @@ class GhostPetEntity(
             for (otherLevel in sLevel.server.allLevels) {
                 val p = otherLevel.getPlayerByUUID(currentOwnerUuid)
                 if (p != null) {
-                    removeLight(sLevel)
                     teleportTo(otherLevel, p.x, p.y + 1.2, p.z, emptySet(), 0.0f, 0.0f, false)
                     return
                 }
             }
-            updateLight(sLevel, blockPosition())
             return
         }
 
         if (owner.level() != sLevel) {
             val targetLevel = owner.level()
-            removeLight(sLevel)
             teleportTo(targetLevel, owner.x, owner.y + 1.2, owner.z, emptySet(), 0.0f, 0.0f, false)
             return
         }
@@ -257,6 +216,5 @@ class GhostPetEntity(
 
         yRot = owner.yRot
         yHeadRot = owner.yRot
-        updateLight(sLevel, blockPosition())
     }
 }

@@ -63,6 +63,7 @@ class DemonEyeEntity(
 
     private var wanderTarget: Vec3? = null
     private var wanderTicksLeft: Int = 0
+    private var cachedGroundY: Int = 0
 
     init {
         isNoGravity = true
@@ -175,18 +176,23 @@ class DemonEyeEntity(
             (currentTarget is Player && currentTarget.isCreative) ||
             currentTarget.distanceToSqr(this) > 900.0
         ) {
-            val nearest =
-                sLevel
-                    .players()
-                    .filter { p ->
-                        p.isAlive && !p.isSpectator && !p.isCreative && p.distanceToSqr(this) <= 900.0
-                    }.minByOrNull { it.distanceToSqr(this) }
-            currentTarget = nearest
-            target = currentTarget
+            if (tickCount % 10 == 0 || currentTarget == null) {
+                val nearest =
+                    sLevel
+                        .players()
+                        .filter { p ->
+                            p.isAlive && !p.isSpectator && !p.isCreative && p.distanceToSqr(this) <= 900.0
+                        }.minByOrNull { it.distanceToSqr(this) }
+                currentTarget = nearest
+                target = currentTarget
+            }
         }
 
-        // Current ground level directly below the eye
-        val groundY = sLevel.getHeight(Heightmap.Types.MOTION_BLOCKING, blockX, blockZ)
+        // Current ground level directly below the eye (cached every second)
+        if (tickCount % 20 == 0 || cachedGroundY == 0) {
+            cachedGroundY = sLevel.getHeight(Heightmap.Types.MOTION_BLOCKING, blockX, blockZ)
+        }
+        val groundY = cachedGroundY
         val maxAllowedY = groundY + 50.0
 
         if (currentTarget != null && currentTarget.isAlive) {
@@ -197,13 +203,11 @@ class DemonEyeEntity(
                 stunTicks--
                 val recoilVel = deltaMovement.scale(0.85)
                 setDeltaMovement(recoilVel)
-                move(MoverType.SELF, recoilVel)
             } else if (windupTicks > 0) {
                 windupTicks--
                 // Windup pause/jitter right before the dash
                 val slowVel = deltaMovement.scale(0.65)
                 setDeltaMovement(slowVel)
-                move(MoverType.SELF, slowVel)
 
                 if (windupTicks <= 0) {
                     isDiving = true
@@ -219,8 +223,8 @@ class DemonEyeEntity(
                 val distToEye = position().distanceTo(currentTarget.eyePosition)
 
                 if (distToEye < 1.35 || distToTarget < 1.35) {
-                    // Hit player with EYE (front) - 1 HP pure magic damage
-                    currentTarget.hurtServer(sLevel, damageSources().magic(), 1.0f)
+                    // Hit player with EYE (front) - 1 HP physical mob attack
+                    currentTarget.hurtServer(sLevel, damageSources().mobAttack(this), 1.0f)
 
                     sLevel.playSound(null, x, y, z, SoundEvents.FOX_BITE, SoundSource.HOSTILE, 1.2f, 1.0f)
                     val bloodOption = BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState())
@@ -254,7 +258,6 @@ class DemonEyeEntity(
                     // Slow, controllable dash (0.28 blocks/tick) - easy for player to dodge/hit!
                     val diveVelocity = diff.normalize().scale(0.28)
                     setDeltaMovement(diveVelocity)
-                    move(MoverType.SELF, diveVelocity)
                 }
             } else if (isRetreating) {
                 retreatTicksLeft--
@@ -270,7 +273,6 @@ class DemonEyeEntity(
                 } else {
                     val retreatVel = diff.normalize().scale(0.24)
                     setDeltaMovement(retreatVel)
-                    move(MoverType.SELF, retreatVel)
                 }
             } else {
                 diveCooldownTicks--
@@ -288,7 +290,6 @@ class DemonEyeEntity(
                     val moveSpeed = if (distToTarget > 10.0) 0.18 else 0.13
                     val vel = diff.normalize().scale(moveSpeed)
                     setDeltaMovement(vel)
-                    move(MoverType.SELF, vel)
                 }
             }
 
@@ -312,12 +313,10 @@ class DemonEyeEntity(
                 // Must descend immediately
                 val descendVel = Vec3(deltaMovement.x * 0.7, -0.22, deltaMovement.z * 0.7)
                 setDeltaMovement(descendVel)
-                move(MoverType.SELF, descendVel)
             } else if (y <= groundY + 2.5) {
                 // Too close to ground, lift up slightly
                 val ascendVel = Vec3(deltaMovement.x * 0.7, 0.15, deltaMovement.z * 0.7)
                 setDeltaMovement(ascendVel)
-                move(MoverType.SELF, ascendVel)
             } else {
                 wanderTicksLeft--
                 if (wanderTicksLeft <= 0 || wanderTarget == null || position().distanceToSqr(wanderTarget!!) < 2.0) {
@@ -336,7 +335,6 @@ class DemonEyeEntity(
                 val wanderSpeed = 0.08
                 val wanderVel = wanderDiff.normalize().scale(wanderSpeed)
                 setDeltaMovement(wanderVel)
-                move(MoverType.SELF, wanderVel)
 
                 // Face wandering direction with pupil
                 if (wanderVel.horizontalDistanceSqr() > 0.0005) {
@@ -352,6 +350,14 @@ class DemonEyeEntity(
                     xRot = wPitch
                 }
             }
+        }
+    }
+
+    override fun travel(travelVector: Vec3) {
+        if (isEffectiveAi) {
+            move(MoverType.SELF, deltaMovement)
+        } else {
+            super.travel(travelVector)
         }
     }
 

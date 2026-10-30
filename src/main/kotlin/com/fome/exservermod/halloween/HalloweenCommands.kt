@@ -10,22 +10,21 @@ import net.minecraft.network.chat.Component
 class HalloweenCommands(
     private val event: HalloweenEvent,
 ) {
+    private fun isOp(source: net.minecraft.commands.CommandSourceStack): Boolean =
+        source.player?.let { p -> source.server.playerList.isOp(p.nameAndId()) } ?: true
+
     fun register() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             val eventNode =
                 Commands
                     .literal("event")
                     .executes { ctx ->
-                        val server = ctx.source.server
-                        if (event.phase == HalloweenPhase.IDLE) {
-                            event.startEvent(server)
-                        } else {
-                            sendStatus(ctx.source)
-                        }
+                        sendStatus(ctx.source)
                         1
                     }.then(
                         Commands
                             .literal("start")
+                            .requires { isOp(it) }
                             .executes { ctx ->
                                 val server = ctx.source.server
                                 event.startEvent(server)
@@ -34,6 +33,7 @@ class HalloweenCommands(
                     ).then(
                         Commands
                             .literal("stop")
+                            .requires { isOp(it) }
                             .executes { ctx ->
                                 val server = ctx.source.server
                                 event.endEvent(server)
@@ -42,6 +42,7 @@ class HalloweenCommands(
                     ).then(
                         Commands
                             .literal("skip")
+                            .requires { isOp(it) }
                             .executes { ctx ->
                                 val server = ctx.source.server
                                 if (event.phase == HalloweenPhase.ACTIVE_GATHERING) {
@@ -50,20 +51,28 @@ class HalloweenCommands(
                                         Component.translatable("exservermod.halloween.skipped").withStyle(ChatFormatting.YELLOW),
                                     )
                                 } else {
-                                    ctx.source.sendSystemMessage(Component.literal("§cСбор конфет сейчас не идет!"))
+                                    ctx.source.sendSystemMessage(
+                                        Component
+                                            .translatable(
+                                                "exservermod.halloween.command.gathering_not_active",
+                                            ).withStyle(ChatFormatting.RED),
+                                    )
                                 }
                                 1
                             },
                     ).then(
                         Commands
                             .literal("spawnmerchant")
+                            .requires { isOp(it) }
                             .executes { ctx ->
                                 val server = ctx.source.server
                                 val player = ctx.source.player
                                 if (player != null) {
                                     event.spawnMerchantInFrontOf(server, player)
                                 } else {
-                                    ctx.source.sendSystemMessage(Component.literal("§cКоманду может выполнять только игрок!"))
+                                    ctx.source.sendSystemMessage(
+                                        Component.translatable("exservermod.halloween.command.player_only").withStyle(ChatFormatting.RED),
+                                    )
                                 }
                                 1
                             },
@@ -92,6 +101,7 @@ class HalloweenCommands(
                     ).then(
                         Commands
                             .literal("givecandy")
+                            .requires { isOp(it) }
                             .then(
                                 Commands
                                     .argument("amount", IntegerArgumentType.integer(1))
@@ -109,7 +119,12 @@ class HalloweenCommands(
                                                 ),
                                             )
                                         } else {
-                                            ctx.source.sendSystemMessage(Component.literal("§cУкажите целевого игрока!"))
+                                            ctx.source.sendSystemMessage(
+                                                Component
+                                                    .translatable(
+                                                        "exservermod.halloween.command.specify_player",
+                                                    ).withStyle(ChatFormatting.RED),
+                                            )
                                         }
                                         1
                                     },
@@ -138,7 +153,7 @@ class HalloweenCommands(
                     ).then(
                         Commands
                             .literal("setcandy")
-                            .requires { it.player?.let { p -> it.server.playerList.isOp(p.nameAndId()) } ?: true }
+                            .requires { isOp(it) }
                             .then(
                                 Commands
                                     .argument("player", EntityArgument.player())
@@ -162,8 +177,8 @@ class HalloweenCommands(
                             ),
                     )
 
-            dispatcher.register(eventNode)
-            dispatcher.register(Commands.literal("halloween").redirect(dispatcher.register(eventNode)))
+            val registeredNode = dispatcher.register(eventNode)
+            dispatcher.register(Commands.literal("halloween").redirect(registeredNode))
         }
     }
 

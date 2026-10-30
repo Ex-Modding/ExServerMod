@@ -17,30 +17,29 @@ object BossCustomTextures {
         val contents = component.contents
         val key = if (contents is TranslatableContents) contents.key.lowercase(Locale.ROOT) else ""
 
-        if (key.contains("witch") || text.contains("witch") || text.contains("ведьм") || text.contains("шабаш")) {
+        if (key == "exservermod.waves.mob.witch_champion" ||
+            text.contains("верховная ведьма") ||
+            text.contains("coven mistress")
+        ) {
             return WITCH_QUEEN
         }
-        if (key.contains("blaze") ||
-            text.contains("incinerator") ||
+        if (key == "exservermod.waves.mob.blaze_champion" ||
+            text.contains("пламенный чемпион") ||
+            text.contains("infernal blaze") ||
             text.contains("испепелитель") ||
-            text.contains("пламен") ||
-            text.contains("blaze")
+            text.contains("incinerator")
         ) {
             return INCINERATOR
         }
-        if (key.contains("dread") ||
-            text.contains("dread") ||
-            text.contains("погибел") ||
-            text.contains("преисподн") ||
-            text.contains("рыцарь")
+        if (key == "exservermod.waves.mob.dread_champion" ||
+            text.contains("рыцарь преисподней") ||
+            text.contains("dread knight")
         ) {
             return DREAD_CHAMPION
         }
-        if (key.contains("warden") ||
-            text.contains("warden") ||
-            text.contains("варден") ||
-            text.contains("хранител") ||
-            text.contains("страж")
+        if (key.contains("warden_boss") ||
+            text.contains("warden boss") ||
+            text.contains("хранитель глубин")
         ) {
             return WARDEN_BOSS
         }
@@ -49,16 +48,20 @@ object BossCustomTextures {
 
     fun getBossTexture(name: String): Identifier? {
         val lower = name.lowercase(Locale.ROOT)
-        if (lower.contains("witch") || lower.contains("ведьм") || lower.contains("шабаш")) {
+        if (lower.contains("верховная ведьма") || lower.contains("coven mistress")) {
             return WITCH_QUEEN
         }
-        if (lower.contains("incinerator") || lower.contains("испепелитель") || lower.contains("пламен") || lower.contains("blaze")) {
+        if (lower.contains("пламенный чемпион") ||
+            lower.contains("infernal blaze") ||
+            lower.contains("испепелитель") ||
+            lower.contains("incinerator")
+        ) {
             return INCINERATOR
         }
-        if (lower.contains("dread") || lower.contains("погибел") || lower.contains("преисподн") || lower.contains("рыцарь")) {
+        if (lower.contains("рыцарь преисподней") || lower.contains("dread knight")) {
             return DREAD_CHAMPION
         }
-        if (lower.contains("warden") || lower.contains("варден") || lower.contains("хранител") || lower.contains("страж")) {
+        if (lower.contains("warden boss") || lower.contains("хранитель глубин")) {
             return WARDEN_BOSS
         }
         return null

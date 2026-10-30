@@ -81,6 +81,7 @@ class HalloweenEvent(
 
     private val petsFile = File(storageFile.parentFile, "halloween_ghost_pets.json")
     private val playerPets: MutableMap<UUID, UUID> = ConcurrentHashMap()
+    private val pendingPetSummons: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
 
     init {
         instance = this
@@ -116,26 +117,20 @@ class HalloweenEvent(
     }
 
     fun hasActiveGhostPet(player: ServerPlayer): Boolean {
-        val petUuid = playerPets[player.uuid]
+        val petUuid = playerPets[player.uuid] ?: return false
         val server = player.level().server
-        if (petUuid != null) {
-            for (lvl in server.allLevels.toList()) {
-                val entity = lvl.getEntity(petUuid)
-                if (entity != null && entity.isAlive) {
-                    return true
-                }
-            }
-        }
-        for (lvl in server.allLevels.toList()) {
-            for (entity in lvl.allEntities) {
-                if (entity is GhostPetEntity && entity.ownerUuid == player.uuid && entity.isAlive) {
-                    playerPets[player.uuid] = entity.uuid
+        for (lvl in server.allLevels) {
+            val entity = lvl.getEntity(petUuid)
+            if (entity != null) {
+                if (!entity.isAlive || entity.isRemoved) {
+                    playerPets.remove(player.uuid)
                     savePlayerPets()
-                    return true
+                    return false
                 }
+                return true
             }
         }
-        return false
+        return true
     }
 
     var phase: HalloweenPhase = HalloweenPhase.IDLE
@@ -175,6 +170,9 @@ class HalloweenEvent(
 
     private fun registerServerTick() {
         ServerTickEvents.END_SERVER_TICK.register { server ->
+            if (server.tickCount % 600 == 0) {
+                balanceManager?.saveIfDirty(sync = false)
+            }
             when (phase) {
                 HalloweenPhase.IDLE -> {
                     ticksUntilNextEvent--
@@ -327,7 +325,6 @@ class HalloweenEvent(
             val pos = candy.position()
             val nearestPlayerDist = players.minOfOrNull { it.position().distanceTo(pos) } ?: Double.MAX_VALUE
             if (nearestPlayerDist > 80.0) {
-                candy.removeLight()
                 candy.discard()
                 iterator.remove()
             }
@@ -573,7 +570,6 @@ class HalloweenEvent(
     private fun clearCandies() {
         for (candy in spawnedCandies) {
             if (candy.isAlive) {
-                candy.removeLight()
                 candy.discard()
             }
         }
@@ -672,7 +668,10 @@ class HalloweenEvent(
                 .defaultClock()
                 .orElse(null)
         if (clock != null) {
-            server.clockManager().setTotalTicks(clock, 18000L)
+            val current = server.clockManager().getTotalTicks(clock)
+            val dayTicks = current % 24000L
+            val needed = if (dayTicks <= 18000L) 18000L - dayTicks else (24000L - dayTicks) + 18000L
+            server.clockManager().setTotalTicks(clock, current + needed)
         }
     }
 
@@ -688,7 +687,8 @@ class HalloweenEvent(
             val ticks = server.clockManager().getTotalTicks(clock)
             val dayTicks = ticks % 24000L
             if (dayTicks < 13000L || dayTicks > 23000L) {
-                server.clockManager().setTotalTicks(clock, 18000L)
+                val needed = if (dayTicks < 13000L) 18000L - dayTicks else (24000L - dayTicks) + 18000L
+                server.clockManager().setTotalTicks(clock, ticks + needed)
             }
         }
     }
@@ -711,10 +711,31 @@ class HalloweenEvent(
         }
     }
 
+    private fun giveOrDrop(
+        player: ServerPlayer,
+        stack: ItemStack,
+    ) {
+        if (!player.inventory.add(stack)) {
+            player.drop(stack, false)
+        }
+    }
+
     private fun handleMerchantPurchase(
         player: ServerPlayer,
         itemKey: String,
     ) {
+        if (phase == HalloweenPhase.IDLE) return
+        if (!activeMerchantWares.contains(itemKey)) return
+
+        val merchantNearby =
+            player
+                .level()
+                .getEntitiesOfClass(
+                    HalloweenMerchantEntity::class.java,
+                    player.boundingBox.inflate(8.0),
+                ).isNotEmpty()
+        if (!merchantNearby) return
+
         if (itemKey == "ghost_pet" && hasActiveGhostPet(player)) {
             player.sendSystemMessage(
                 Component.translatable("exservermod.halloween.already_have_pet").withStyle(ChatFormatting.RED),
@@ -740,39 +761,40 @@ class HalloweenEvent(
 
         when (itemKey) {
             "ghost_pet" -> {
+                pendingPetSummons.add(player.uuid)
                 ServerPlayNetworking.send(player, OpenGhostNamingPayload.INSTANCE)
             }
 
             "pumpkin_bow" -> {
-                player.addItem(ItemStack(HalloweenItems.PUMPKIN_BOW))
+                giveOrDrop(player, ItemStack(HalloweenItems.PUMPKIN_BOW))
             }
 
             "golden_apple" -> {
-                player.addItem(ItemStack(Items.ENCHANTED_GOLDEN_APPLE))
+                giveOrDrop(player, ItemStack(Items.ENCHANTED_GOLDEN_APPLE))
             }
 
             "golden_carrots" -> {
-                player.addItem(ItemStack(Items.GOLDEN_CARROT, 64))
+                giveOrDrop(player, ItemStack(Items.GOLDEN_CARROT, 64))
             }
 
             "totem" -> {
-                player.addItem(ItemStack(Items.TOTEM_OF_UNDYING))
+                giveOrDrop(player, ItemStack(Items.TOTEM_OF_UNDYING))
             }
 
             "fireworks_shulker" -> {
-                player.addItem(createFireworksShulker())
+                giveOrDrop(player, createFireworksShulker())
             }
 
             "wither_skulls" -> {
-                player.addItem(ItemStack(Items.WITHER_SKELETON_SKULL, 3))
+                giveOrDrop(player, ItemStack(Items.WITHER_SKELETON_SKULL, 3))
             }
 
             "netherite_ingot" -> {
-                player.addItem(ItemStack(Items.NETHERITE_INGOT))
+                giveOrDrop(player, ItemStack(Items.NETHERITE_INGOT))
             }
 
             "slime_blocks" -> {
-                player.addItem(ItemStack(Items.SLIME_BLOCK, 16))
+                giveOrDrop(player, ItemStack(Items.SLIME_BLOCK, 16))
             }
         }
 
@@ -789,6 +811,9 @@ class HalloweenEvent(
         player: ServerPlayer,
         petName: String,
     ) {
+        if (!pendingPetSummons.remove(player.uuid)) {
+            return
+        }
         val sLevel = player.level()
 
         // Despawn old pet if any
@@ -840,27 +865,20 @@ class HalloweenEvent(
     private fun registerPlayerJoin() {
         ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
             val player = handler.player
-            if (phase == HalloweenPhase.ACTIVE_GATHERING) {
-                ServerPlayNetworking.send(player, HalloweenSkySyncPayload(true))
-            }
-            // Check if player has pet in world
+            ServerPlayNetworking.send(player, HalloweenSkySyncPayload(phase == HalloweenPhase.ACTIVE_GATHERING))
+
+            // Teleport pet if loaded in world and not waiting
             val petUuid = playerPets[player.uuid]
             if (petUuid != null) {
                 val server = player.level().server
-                var found = false
-                for (lvl in server.allLevels.toList()) {
-                    if (lvl.getEntity(petUuid) != null) {
-                        found = true
+                for (lvl in server.allLevels) {
+                    val pet = lvl.getEntity(petUuid) as? GhostPetEntity
+                    if (pet != null) {
+                        if (!pet.isWaiting && (pet.level() != player.level() || pet.distanceToSqr(player) > 576.0)) {
+                            pet.teleportTo(player.level(), player.x, player.y + 1.2, player.z, emptySet(), 0.0f, 0.0f, false)
+                        }
                         break
                     }
-                }
-                if (!found) {
-                    val pet = GhostPetEntity(HalloweenEntities.GHOST_PET, player.level())
-                    pet.ownerUuid = player.uuid
-                    pet.customName = Component.literal("Призрак")
-                    pet.setPos(player.x, player.y + 1.2, player.z)
-                    player.level().addFreshEntity(pet)
-                    playerPets[player.uuid] = pet.uuid
                 }
             }
         }

@@ -8,10 +8,16 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.ThrownItemRenderer
 import net.minecraft.client.renderer.entity.state.ThrownItemRenderState
 import net.minecraft.client.renderer.state.level.CameraRenderState
+import net.minecraft.core.BlockPos
 
 class CandyEntityRenderer(
     context: EntityRendererProvider.Context,
 ) : ThrownItemRenderer<CandyEntity>(context, 1.3f, false) {
+    override fun getBlockLightLevel(
+        entity: CandyEntity,
+        pos: BlockPos,
+    ): Int = 12
+
     override fun submit(
         state: ThrownItemRenderState,
         poseStack: PoseStack,

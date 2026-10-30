@@ -21,7 +21,6 @@
     "BlazeRendererBossTextureMixin",
     "ClientEntityRenderDispatcherMixin",
     "EntityRenderStateMixin",
-    "EntityRendererBossTextureMixin",
     "FogRendererMixin",
     "LivingEntityRendererBossTextureMixin",
     "LivingEntityRendererExtractStateMixin",

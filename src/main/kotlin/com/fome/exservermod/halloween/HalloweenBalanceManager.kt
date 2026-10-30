@@ -8,15 +8,26 @@ import net.minecraft.server.level.ServerPlayer
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class HalloweenBalanceManager(
     private val storageFile: File,
 ) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val balances: ConcurrentHashMap<UUID, Int> = ConcurrentHashMap()
+    private val isDirty: AtomicBoolean = AtomicBoolean(false)
+    private val ioExecutor =
+        Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "Halloween-Balance-IO").apply { isDaemon = true }
+        }
 
     init {
         load()
+    }
+
+    fun markDirty() {
+        isDirty.set(true)
     }
 
     fun getBalance(uuid: UUID): Int = balances.getOrDefault(uuid, 0)
@@ -28,7 +39,7 @@ class HalloweenBalanceManager(
     ): Int {
         if (amount <= 0) return getBalance(player.uuid)
         val newBalance = balances.compute(player.uuid) { _, current -> (current ?: 0) + amount } ?: amount
-        save()
+        markDirty()
         if (sendActionBar) {
             sendBalanceActionBar(player, newBalance)
         }
@@ -41,7 +52,7 @@ class HalloweenBalanceManager(
     ): Int {
         if (amount <= 0) return getBalance(uuid)
         val newBalance = balances.compute(uuid) { _, current -> (current ?: 0) + amount } ?: amount
-        save()
+        markDirty()
         return newBalance
     }
 
@@ -62,7 +73,7 @@ class HalloweenBalanceManager(
             }
         }
         if (success) {
-            save()
+            markDirty()
             sendBalanceActionBar(player, getBalance(player.uuid))
         }
         return success
@@ -80,7 +91,7 @@ class HalloweenBalanceManager(
             (bal - removed).coerceAtLeast(0)
         }
         if (removed > 0) {
-            save()
+            markDirty()
             sendBalanceActionBar(player, getBalance(player.uuid))
         }
         return removed
@@ -98,7 +109,7 @@ class HalloweenBalanceManager(
             (bal - removed).coerceAtLeast(0)
         }
         if (removed > 0) {
-            save()
+            markDirty()
         }
         return removed
     }
@@ -109,7 +120,8 @@ class HalloweenBalanceManager(
     ) {
         val sanitized = amount.coerceAtLeast(0)
         balances[uuid] = sanitized
-        save()
+        markDirty()
+        save(sync = true)
     }
 
     fun sendBalanceActionBar(
@@ -148,7 +160,26 @@ class HalloweenBalanceManager(
         }
     }
 
-    fun save() {
+    fun saveIfDirty(sync: Boolean = false) {
+        if (isDirty.compareAndSet(true, false)) {
+            if (sync) {
+                doSave()
+            } else {
+                ioExecutor.submit { doSave() }
+            }
+        }
+    }
+
+    fun save(sync: Boolean = true) {
+        isDirty.set(false)
+        if (sync) {
+            doSave()
+        } else {
+            ioExecutor.submit { doSave() }
+        }
+    }
+
+    private fun doSave() {
         try {
             storageFile.parentFile?.mkdirs()
             val stringKeyMap = balances.mapKeys { it.key.toString() }

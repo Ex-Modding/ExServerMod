@@ -3,7 +3,6 @@ package com.fome.exservermod.halloween.entity
 import com.fome.exservermod.halloween.HalloweenEvent
 import com.fome.exservermod.halloween.item.CandyPouchItem
 import net.minecraft.ChatFormatting
-import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.chat.Component
 import net.minecraft.network.syncher.SynchedEntityData
@@ -21,8 +20,6 @@ import net.minecraft.world.entity.projectile.ItemSupplier
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.block.LightBlock
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
@@ -45,7 +42,6 @@ class CandyEntity(
         damage: Float,
     ): Boolean = false
 
-    private var lightPos: BlockPos? = null
     private var activeChannelerUuid: UUID? = null
     private var channelProgressTicks: Int = 0
 
@@ -74,13 +70,6 @@ class CandyEntity(
         super.tick()
 
         val sLevel = level() as? ServerLevel ?: return
-
-        // Maintain light level 7
-        val pos = blockPosition()
-        if (lightPos == null && sLevel.getBlockState(pos).isAir) {
-            sLevel.setBlockAndUpdate(pos, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 7))
-            lightPos = pos
-        }
 
         // Ambient particles
         if (tickCount % 5 == 0) {
@@ -163,7 +152,6 @@ class CandyEntity(
                     0.1,
                 )
 
-                removeLight()
                 discard()
             }
         } else {
@@ -219,21 +207,5 @@ class CandyEntity(
         } else {
             Pair(100, 25) // Base: 5.0 seconds, +25 candies
         }
-    }
-
-    fun removeLight() {
-        val pos = lightPos
-        if (pos != null) {
-            val sLevel = level() as? ServerLevel
-            if (sLevel != null && sLevel.getBlockState(pos).`is`(Blocks.LIGHT)) {
-                sLevel.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState())
-            }
-            lightPos = null
-        }
-    }
-
-    override fun remove(reason: RemovalReason) {
-        removeLight()
-        super.remove(reason)
     }
 }
