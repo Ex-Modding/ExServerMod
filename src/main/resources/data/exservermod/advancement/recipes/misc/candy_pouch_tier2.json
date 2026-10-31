@@ -23,7 +23,9 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "exservermod:candy_pouch_tier2"
+        "recipes": [
+          "exservermod:candy_pouch_tier2"
+        ]
       },
       "trigger": "minecraft:recipe_unlocked"
     }

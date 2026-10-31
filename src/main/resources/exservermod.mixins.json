@@ -8,6 +8,7 @@
     "EntityDimensionsMixin",
     "EntityTrackingPositionMixin",
     "LivingEntityDropMixin",
+    "MappedRegistrySafeIteratorMixin",
     "ServerEntityMixin",
     "ServerPlayerDropMixin",
     "SlotContainerMixin",

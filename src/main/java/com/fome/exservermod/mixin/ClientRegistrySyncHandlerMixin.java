@@ -22,6 +22,8 @@ public abstract class ClientRegistrySyncHandlerMixin {
             return;
         }
 
+        payload.registryMap().entrySet().removeIf(e -> BuiltInRegistries.REGISTRY.getValue(e.getKey()) == null);
+
         for (Map.Entry<Identifier, Object2IntMap<Identifier>> entry : payload.registryMap().entrySet()) {
             Identifier registryId = entry.getKey();
             Registry<?> localRegistry = BuiltInRegistries.REGISTRY.getValue(registryId);
