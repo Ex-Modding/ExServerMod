@@ -27,6 +27,7 @@
     "LivingEntityRendererBossTextureMixin",
     "LivingEntityRendererExtractStateMixin",
     "SkyRendererMixin",
+    "ViaVersionTemplateItemMixin",
     "WardenRendererBossTextureMixin",
     "WitchRendererBossTextureMixin",
     "ZombieRendererBossTextureMixin"
