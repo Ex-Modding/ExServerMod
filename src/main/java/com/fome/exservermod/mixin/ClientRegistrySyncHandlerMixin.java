@@ -22,6 +22,7 @@ public abstract class ClientRegistrySyncHandlerMixin {
             return;
         }
 
+        payload.registryMap().remove(Identifier.parse("minecraft:data_component_type"));
         payload.registryMap().entrySet().removeIf(e -> BuiltInRegistries.REGISTRY.getValue(e.getKey()) == null);
 
         for (Map.Entry<Identifier, Object2IntMap<Identifier>> entry : payload.registryMap().entrySet()) {

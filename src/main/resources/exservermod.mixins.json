@@ -24,6 +24,7 @@
     "ClientRegistrySyncHandlerMixin",
     "DataComponentBakedEntryMixin",
     "EntityRenderStateMixin",
+    "ItemStackTemplateMixin",
     "FogRendererMixin",
     "LivingEntityRendererBossTextureMixin",
     "LivingEntityRendererExtractStateMixin",
