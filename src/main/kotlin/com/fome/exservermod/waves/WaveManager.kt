@@ -76,7 +76,6 @@ import net.minecraft.world.item.component.CustomData
 import net.minecraft.world.item.component.FireworkExplosion
 import net.minecraft.world.item.component.Fireworks
 import net.minecraft.world.item.component.ItemLore
-import net.minecraft.world.item.enchantment.Enchantable
 import net.minecraft.world.item.enchantment.Enchantment
 import net.minecraft.world.item.enchantment.Enchantments
 import net.minecraft.world.item.enchantment.Repairable
@@ -1690,7 +1689,6 @@ class WaveManager {
                     )
                     enchantItem(level, this, Enchantments.SHARPNESS, 10)
                     enchantItem(level, this, Enchantments.LUNGE, 5)
-                    set(DataComponents.ENCHANTABLE, Enchantable(0))
                     set(DataComponents.REPAIRABLE, Repairable(HolderSet.empty()))
                     set(DataComponents.REPAIR_COST, 1_000_000)
                 }
