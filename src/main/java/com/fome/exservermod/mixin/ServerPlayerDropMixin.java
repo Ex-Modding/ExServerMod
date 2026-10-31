@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Prediction;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,14 +18,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ServerPlayerDropMixin {
 
     @Inject(
-        method = "drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;",
+        method = "drop(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)Lnet/minecraft/world/entity/item/ItemEntity;",
         at = @At("HEAD"),
         cancellable = true
     )
     private void exservermod$interceptTrackerCompassDrop(
         ItemStack stack,
         boolean throwRandomly,
-        boolean retainOwnership,
+        Prediction prediction,
         CallbackInfoReturnable<ItemEntity> cir
     ) {
         if (TrackerCompassManager.isTrackerCompass(stack)) {
