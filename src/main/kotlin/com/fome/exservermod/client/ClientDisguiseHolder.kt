@@ -112,11 +112,10 @@ object ClientDisguiseHolder {
             mob.hurtTime = player.hurtTime
             mob.hurtDuration = player.hurtDuration
             mob.deathTime = player.deathTime
-            mob.attackAnim = player.attackAnim
-            mob.oAttackAnim = player.oAttackAnim
-            mob.swinging = player.swinging
-            mob.swingingArm = player.swingingArm
-            mob.swingTime = player.swingTime
+            val swing = player.currentSwing
+            if (swing != null && mob.currentSwing == null) {
+                mob.swing(swing.hand(), swing.animation(), false)
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.tags.TagKey
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.effect.MobEffectInstance
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.trading.MerchantOffers
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.Block
 import kotlin.random.Random
 
 class HalloweenMerchantEntity(
@@ -29,7 +31,7 @@ class HalloweenMerchantEntity(
     init {
         customName = Component.translatable("exservermod.halloween.merchant_title")
         isCustomNameVisible = true
-        isInvulnerable = true
+        setPermanentlyInvulnerable(true)
         setPersistenceRequired()
         despawnDelay = -1
         setGlowingTag(true)
@@ -74,6 +76,7 @@ class HalloweenMerchantEntity(
         y: Double,
         z: Double,
         broadcast: Boolean,
+        avoidanceTag: TagKey<Block>,
     ): Boolean = false
 
     override fun canTeleport(

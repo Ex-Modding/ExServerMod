@@ -335,7 +335,7 @@ class NightmareIslandManager {
         mob.setPos(pos.x + 0.5, pos.y.toDouble(), pos.z + 0.5)
         mob.isNoAi = true
         mob.isSilent = true
-        mob.isInvulnerable = true
+        mob.setPermanentlyInvulnerable(true)
         mob.setPersistenceRequired()
         mob.addTag(TAG_PARANORMAL_GHOST)
 
@@ -365,7 +365,7 @@ class NightmareIslandManager {
         zombie.setPos(pos.x + 0.5, initialY, pos.z + 0.5)
         zombie.isNoAi = true
         zombie.isSilent = true
-        zombie.isInvulnerable = true
+        zombie.setPermanentlyInvulnerable(true)
         zombie.setPersistenceRequired()
         zombie.addTag(TAG_PARANORMAL_HAND)
 
@@ -389,7 +389,7 @@ class NightmareIslandManager {
         runner.setBaby(true)
         runner.setPos(pos.x + 0.5, pos.y.toDouble(), pos.z + 0.5)
         runner.isSilent = true
-        runner.isInvulnerable = true
+        runner.setPermanentlyInvulnerable(true)
         runner.setPersistenceRequired()
         runner.addTag(TAG_PARANORMAL_RUNNER)
 

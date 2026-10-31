@@ -36,6 +36,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.util.Prediction
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.projectile.FireworkRocketEntity
 import net.minecraft.world.item.ItemStack
@@ -988,7 +989,7 @@ class GameEventHandler(
         val compass = TrackerCompassManager.createTrackerCompass(targetPos)
 
         if (!seeker.inventory.add(compass)) {
-            seeker.drop(compass, false)
+            seeker.drop(compass, false, Prediction.SERVER_ONLY)
         }
         seeker.inventoryMenu.broadcastChanges()
 

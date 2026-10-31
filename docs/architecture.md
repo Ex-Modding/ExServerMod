@@ -1,10 +1,10 @@
 # Architecture & Project Conventions: ExServerMod
 
 ## 1. Core Technology Stack
-- **Target Minecraft Version**: **Minecraft 26.2+** (compatible forward with 26.3, 26.4, etc.).
+- **Target Minecraft Version**: **Minecraft 26.3+** (compatible forward with 26.4, etc.).
 - **Runtime Environment**: Java 25 LTS (OpenJDK 25).
 - **Primary Language**: **Kotlin ONLY** (`.kt`, Kotlin 2.4.21). Mod business logic is written strictly in Kotlin; Java is reserved exclusively for low-level Fabric bytecode mixins (`src/main/java/`).
-- **Platform / Loader**: [Fabric Loader](https://fabricmc.net/) (0.19.5+) + [Fabric Language Kotlin](https://github.com/FabricMC/fabric-language-kotlin) (`FLK` 1.14.2+).
+- **Platform / Loader**: [Fabric Loader](https://fabricmc.net/) (0.20.1+) + [Fabric Language Kotlin](https://github.com/FabricMC/fabric-language-kotlin) (`FLK` 1.14.2+).
 - **Target Environment**: Dedicated Minecraft Server (FoMe Server) with optional client-side cosmetic features (Roulette GUI, 1st/3rd person disguise rendering).
 - **Build System**: Gradle 9.8.2 with Kotlin DSL (`build.gradle.kts`) and `net.fabricmc.fabric-loom` 1.19.2 (unobfuscated toolchain for Minecraft 26.x+).
 - **Task Automation**: [Taskfile.yml](file:///Users/soroqn/me/private-code/Minecraft-FoMe/ExServerMod/Taskfile.yml).

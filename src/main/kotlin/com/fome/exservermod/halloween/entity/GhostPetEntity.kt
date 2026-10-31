@@ -34,7 +34,7 @@ class GhostPetEntity(
 
     init {
         noPhysics = true
-        isInvulnerable = true
+        setPermanentlyInvulnerable(true)
         isCustomNameVisible = true
     }
 

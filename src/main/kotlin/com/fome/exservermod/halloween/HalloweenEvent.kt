@@ -31,6 +31,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.BlockTags
+import net.minecraft.util.Prediction
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -668,7 +669,7 @@ class HalloweenEvent(
                 .defaultClock()
                 .orElse(null)
         if (clock != null) {
-            val current = server.clockManager().getTotalTicks(clock)
+            val current = server.clockManager().getInstance(clock).totalTicks()
             val dayTicks = current % 24000L
             val needed = if (dayTicks <= 18000L) 18000L - dayTicks else (24000L - dayTicks) + 18000L
             server.clockManager().setTotalTicks(clock, current + needed)
@@ -684,7 +685,7 @@ class HalloweenEvent(
                 .defaultClock()
                 .orElse(null)
         if (clock != null) {
-            val ticks = server.clockManager().getTotalTicks(clock)
+            val ticks = server.clockManager().getInstance(clock).totalTicks()
             val dayTicks = ticks % 24000L
             if (dayTicks < 13000L || dayTicks > 23000L) {
                 val needed = if (dayTicks < 13000L) 18000L - dayTicks else (24000L - dayTicks) + 18000L
@@ -716,7 +717,7 @@ class HalloweenEvent(
         stack: ItemStack,
     ) {
         if (!player.inventory.add(stack)) {
-            player.drop(stack, false)
+            player.drop(stack, false, Prediction.SERVER_ONLY)
         }
     }
 

@@ -26,7 +26,7 @@ class CandyEntityRenderer(
     ) {
         poseStack.pushPose()
         val spin = (System.currentTimeMillis() % 3600L) * 0.1f
-        poseStack.mulPose(Axis.YP.rotationDegrees(spin))
+        poseStack.rotateDegrees(Axis.YP, spin)
         super.submit(state, poseStack, submitNodeCollector, cameraRenderState)
         poseStack.popPose()
     }

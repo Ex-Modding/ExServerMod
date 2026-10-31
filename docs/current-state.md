@@ -1,7 +1,7 @@
 # Project Current State
 
 ## Summary
-The project documentation, gameplay rules, testing workflow, and architecture are fully implemented for **ExServerMod** — a Kotlin-only Fabric mod for Minecraft 26.2+ (on Java 25) implementing Hide & Seek, Mob Disguises, Visual Roulette Wheel, AFK bot control, Wave Defense, and BlueMap stealth synchronization.
+The project documentation, gameplay rules, testing workflow, and architecture are fully implemented for **ExServerMod** — a Kotlin-only Fabric mod for Minecraft 26.3+ (on Java 25) implementing Hide & Seek, Mob Disguises, Visual Roulette Wheel, AFK bot control, Wave Defense, Halloween Nightmare Event, and BlueMap stealth synchronization.
 
 ## Active Status
 **Round 3 (October 2026) — Horde Defense Rework: 11 Nightmare Waves, Raid Bossbar, Permadeath, Custom Mobs & Mansion Anti-Turtle.**

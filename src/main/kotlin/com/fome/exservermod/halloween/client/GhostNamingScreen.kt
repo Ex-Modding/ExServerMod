@@ -1,6 +1,7 @@
 package com.fome.exservermod.halloween.client
 
 import com.fome.exservermod.halloween.network.SubmitGhostNamePayload
+import com.mojang.blaze3d.platform.InputConstants
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
@@ -8,7 +9,6 @@ import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.Component
-import org.lwjgl.glfw.GLFW
 
 class GhostNamingScreen : Screen(Component.translatable("exservermod.halloween.ghost_naming_title")) {
     private lateinit var nameBox: EditBox
@@ -45,7 +45,7 @@ class GhostNamingScreen : Screen(Component.translatable("exservermod.halloween.g
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
-        if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+        if (event.key() == InputConstants.KEY_RETURN || event.key() == InputConstants.KEY_NUMPADENTER) {
             submitName()
             return true
         }

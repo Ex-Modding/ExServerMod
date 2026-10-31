@@ -37,6 +37,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.util.Prediction
 import net.minecraft.world.BossEvent
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
@@ -352,7 +353,7 @@ class WaveManager {
                         val defender = server.playerList.getPlayer(uuid) ?: continue
                         val stack = ItemStack(Items.EXPERIENCE_BOTTLE, 64)
                         if (!defender.inventory.add(stack)) {
-                            defender.drop(stack, false)
+                            defender.drop(stack, false, Prediction.SERVER_ONLY)
                         }
                     }
                     server.playerList.broadcastSystemMessage(
@@ -1703,7 +1704,7 @@ class WaveManager {
 
         for (reward in rewards) {
             if (!defender.inventory.add(reward)) {
-                defender.drop(reward, false)
+                defender.drop(reward, false, Prediction.SERVER_ONLY)
             }
         }
     }
