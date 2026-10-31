@@ -21,6 +21,7 @@
     "BlazeRendererBossTextureMixin",
     "ClientEntityRenderDispatcherMixin",
     "ClientRegistrySyncHandlerMixin",
+    "DataComponentBakedEntryMixin",
     "EntityRenderStateMixin",
     "FogRendererMixin",
     "LivingEntityRendererBossTextureMixin",
