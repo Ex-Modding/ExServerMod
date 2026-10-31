@@ -1567,7 +1567,7 @@ class WaveManager {
 
     private fun onWaveCleared(server: MinecraftServer) {
         when (val cleared = game.onWaveCleared()) {
-            is WaveTickResult.Victory -> Unit
+            is WaveTickResult.Victory -> onVictory(server)
             is WaveTickResult.TrickWaveCleared -> {
                 server.playerList.broadcastSystemMessage(
                     Component.translatable("exservermod.waves.tot.trick_cleared").withStyle(ChatFormatting.GOLD),
@@ -1595,14 +1595,125 @@ class WaveManager {
         }
     }
 
-    private fun onVictory(server: MinecraftServer) {
-        val level = arenaLevel
-        val center = arenaCenter
-        val wasTrick = game.halloweenChoice == HalloweenChoice.TRICK
+    fun giveDefenderVictoryRewards(
+        server: MinecraftServer,
+        defender: ServerPlayer,
+        wasTrick: Boolean = false,
+    ) {
+        val level = arenaLevel ?: server.overworld()
         val spearChance = if (wasTrick) 1.0f else 0.67f
         val breezeStacks = if (wasTrick) 4 else 2
         val goldenAppleCount = if (wasTrick) 64 else 32
         val expStacks = if (wasTrick) 2 else 1
+
+        val anim = ClientboundSetTitlesAnimationPacket(10, 80, 20)
+        val title =
+            ClientboundSetTitleTextPacket(
+                Component.translatable("exservermod.waves.victory").withStyle(ChatFormatting.GOLD),
+            )
+        val subtitle =
+            ClientboundSetSubtitleTextPacket(
+                Component
+                    .translatable("exservermod.waves.victory_subtitle", WaveDefenseGame.TOTAL_WAVES, game.kills.coerceAtLeast(1))
+                    .withStyle(ChatFormatting.YELLOW),
+            )
+        defender.connection.send(anim)
+        defender.connection.send(title)
+        defender.connection.send(subtitle)
+
+        // Award epic veteran rewards to defender
+        defender.giveExperienceLevels(50)
+
+        val rewards =
+            mutableListOf(
+                createHorsemanLantern(level),
+                ItemStack(Items.HEAVY_CORE, 1),
+                ItemStack(Items.GOLDEN_APPLE, goldenAppleCount),
+                ItemStack(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 2),
+                ItemStack(Items.NETHERITE_INGOT, 4),
+                ItemStack(Items.NETHER_STAR, 1).apply {
+                    set(
+                        DataComponents.CUSTOM_NAME,
+                        Component
+                            .translatable("exservermod.waves.trophy_name")
+                            .withStyle { it.withItalic(false).withColor(ChatFormatting.GOLD) },
+                    )
+                },
+                ItemStack(Items.STICK, 1).apply {
+                    set(
+                        DataComponents.CUSTOM_NAME,
+                        Component
+                            .translatable("exservermod.waves.reward.knockback_stick")
+                            .withStyle { it.withItalic(false).withColor(ChatFormatting.AQUA) },
+                    )
+                    enchantItem(level, this, Enchantments.KNOCKBACK, 10)
+                },
+                PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_STRENGTH),
+                PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_STRENGTH),
+                PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_REGENERATION),
+                PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_REGENERATION),
+                PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_SWIFTNESS),
+                PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_SWIFTNESS),
+            )
+
+        repeat(breezeStacks) {
+            rewards.add(ItemStack(Items.BREEZE_ROD, 64))
+        }
+        repeat(expStacks) {
+            rewards.add(ItemStack(Items.EXPERIENCE_BOTTLE, 64))
+        }
+
+        if (Random.nextFloat() < spearChance) {
+            val spear =
+                ItemStack(Items.NETHERITE_SPEAR).apply {
+                    set(
+                        DataComponents.CUSTOM_NAME,
+                        Component
+                            .translatable("exservermod.waves.reward.spartan_spear.name")
+                            .withStyle { it.withItalic(false).withColor(ChatFormatting.GOLD) },
+                    )
+                    set(
+                        DataComponents.LORE,
+                        ItemLore(
+                            listOf(
+                                Component
+                                    .translatable("exservermod.waves.reward.spartan_spear.lore1")
+                                    .withStyle { it.withItalic(true).withColor(ChatFormatting.GRAY) },
+                                Component
+                                    .translatable("exservermod.waves.reward.spartan_spear.lore2")
+                                    .withStyle { it.withItalic(false).withColor(ChatFormatting.RED) },
+                                Component
+                                    .translatable("exservermod.waves.reward.spartan_spear.lore3")
+                                    .withStyle { it.withItalic(false).withColor(ChatFormatting.DARK_RED) },
+                            ),
+                        ),
+                    )
+                    enchantItem(level, this, Enchantments.SHARPNESS, 10)
+                    enchantItem(level, this, Enchantments.LUNGE, 5)
+                    set(DataComponents.ENCHANTABLE, Enchantable(0))
+                    set(DataComponents.REPAIRABLE, Repairable(HolderSet.empty()))
+                    set(DataComponents.REPAIR_COST, 1_000_000)
+                }
+            rewards.add(spear)
+            server.playerList.broadcastSystemMessage(
+                Component
+                    .translatable("exservermod.waves.reward.spartan_spear_drop", defender.name)
+                    .withStyle(ChatFormatting.GOLD),
+                false,
+            )
+        }
+
+        for (reward in rewards) {
+            if (!defender.inventory.add(reward)) {
+                defender.drop(reward, false)
+            }
+        }
+    }
+
+    private fun onVictory(server: MinecraftServer) {
+        val level = arenaLevel
+        val center = arenaCenter
+        val wasTrick = game.halloweenChoice == HalloweenChoice.TRICK
 
         clearCheckpoint()
         setArenaChunksForced(level, center, false)
@@ -1612,109 +1723,7 @@ class WaveManager {
 
         val defenders = game.defenders.mapNotNull { server.playerList.getPlayer(it) }
         for (defender in defenders) {
-            val anim = ClientboundSetTitlesAnimationPacket(10, 80, 20)
-            val title =
-                ClientboundSetTitleTextPacket(
-                    Component.translatable("exservermod.waves.victory").withStyle(ChatFormatting.GOLD),
-                )
-            val subtitle =
-                ClientboundSetSubtitleTextPacket(
-                    Component
-                        .translatable("exservermod.waves.victory_subtitle", WaveDefenseGame.TOTAL_WAVES, game.kills)
-                        .withStyle(ChatFormatting.YELLOW),
-                )
-            defender.connection.send(anim)
-            defender.connection.send(title)
-            defender.connection.send(subtitle)
-
-            // Award epic veteran rewards to each surviving defender
-            defender.giveExperienceLevels(50)
-
-            val rewardLevel = level ?: server.overworld()
-            val rewards =
-                mutableListOf(
-                    createHorsemanLantern(rewardLevel),
-                    ItemStack(Items.HEAVY_CORE, 1),
-                    ItemStack(Items.GOLDEN_APPLE, goldenAppleCount),
-                    ItemStack(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 2),
-                    ItemStack(Items.NETHERITE_INGOT, 4),
-                    ItemStack(Items.NETHER_STAR, 1).apply {
-                        set(
-                            DataComponents.CUSTOM_NAME,
-                            Component
-                                .translatable("exservermod.waves.trophy_name")
-                                .withStyle { it.withItalic(false).withColor(ChatFormatting.GOLD) },
-                        )
-                    },
-                    ItemStack(Items.STICK, 1).apply {
-                        set(
-                            DataComponents.CUSTOM_NAME,
-                            Component
-                                .translatable("exservermod.waves.reward.knockback_stick")
-                                .withStyle { it.withItalic(false).withColor(ChatFormatting.AQUA) },
-                        )
-                        enchantItem(rewardLevel, this, Enchantments.KNOCKBACK, 10)
-                    },
-                    PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_STRENGTH),
-                    PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_STRENGTH),
-                    PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_REGENERATION),
-                    PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_REGENERATION),
-                    PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_SWIFTNESS),
-                    PotionContents.createItemStack(Items.SPLASH_POTION, Potions.STRONG_SWIFTNESS),
-                )
-
-            repeat(breezeStacks) {
-                rewards.add(ItemStack(Items.BREEZE_ROD, 64))
-            }
-            repeat(expStacks) {
-                rewards.add(ItemStack(Items.EXPERIENCE_BOTTLE, 64))
-            }
-
-            if (Random.nextFloat() < spearChance) {
-                val spear =
-                    ItemStack(Items.NETHERITE_SPEAR).apply {
-                        set(
-                            DataComponents.CUSTOM_NAME,
-                            Component
-                                .translatable("exservermod.waves.reward.spartan_spear.name")
-                                .withStyle { it.withItalic(false).withColor(ChatFormatting.GOLD) },
-                        )
-                        set(
-                            DataComponents.LORE,
-                            ItemLore(
-                                listOf(
-                                    Component
-                                        .translatable("exservermod.waves.reward.spartan_spear.lore1")
-                                        .withStyle { it.withItalic(true).withColor(ChatFormatting.GRAY) },
-                                    Component
-                                        .translatable("exservermod.waves.reward.spartan_spear.lore2")
-                                        .withStyle { it.withItalic(false).withColor(ChatFormatting.RED) },
-                                    Component
-                                        .translatable("exservermod.waves.reward.spartan_spear.lore3")
-                                        .withStyle { it.withItalic(false).withColor(ChatFormatting.DARK_RED) },
-                                ),
-                            ),
-                        )
-                        enchantItem(rewardLevel, this, Enchantments.SHARPNESS, 10)
-                        enchantItem(rewardLevel, this, Enchantments.LUNGE, 5)
-                        set(DataComponents.ENCHANTABLE, Enchantable(0))
-                        set(DataComponents.REPAIRABLE, Repairable(HolderSet.empty()))
-                        set(DataComponents.REPAIR_COST, 1_000_000)
-                    }
-                rewards.add(spear)
-                server.playerList.broadcastSystemMessage(
-                    Component
-                        .translatable("exservermod.waves.reward.spartan_spear_drop", defender.name)
-                        .withStyle(ChatFormatting.GOLD),
-                    false,
-                )
-            }
-
-            for (reward in rewards) {
-                if (!defender.inventory.add(reward)) {
-                    defender.drop(reward, false)
-                }
-            }
+            giveDefenderVictoryRewards(server, defender, wasTrick)
         }
 
         if (wasTrick) {

@@ -9,8 +9,10 @@ import com.fome.exservermod.landmarks.LandmarkManager
 import com.mojang.brigadier.arguments.StringArgumentType
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.minecraft.ChatFormatting
+import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.commands.SharedSuggestionProvider
+import net.minecraft.commands.arguments.EntityArgument
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent
@@ -22,16 +24,24 @@ import net.minecraft.world.phys.Vec3
 class WaveCommands(
     private val landmarkManager: LandmarkManager,
 ) {
+    private fun isOp(source: CommandSourceStack): Boolean = source.player?.let { p -> source.server.playerList.isOp(p.nameAndId()) } ?: true
+
+    private fun findConsoleAnchor(source: CommandSourceStack): ServerPlayer? {
+        val server = source.server
+        return server.playerList.players.firstOrNull {
+            !AfkManager.isBotPlayer(it) &&
+                it.level().dimension() == Level.OVERWORLD &&
+                NightmareIslandManager.isLocationOnIsland(it.x, it.z)
+        } ?: server.playerList.players.firstOrNull { !AfkManager.isBotPlayer(it) }
+    }
+
     fun register() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
                 Commands
                     .literal("waves")
                     .executes { ctx ->
-                        val player = ctx.source.player
-                        if (player != null) {
-                            showStatus(player)
-                        }
+                        showStatus(ctx.source)
                         1
                     }.then(
                         Commands
@@ -39,7 +49,21 @@ class WaveCommands(
                             .executes { ctx ->
                                 val player = ctx.source.player
                                 if (player != null) {
-                                    handleStart(player, null)
+                                    handleStart(ctx.source, player, null)
+                                } else {
+                                    val anchor = findConsoleAnchor(ctx.source)
+                                    if (anchor != null) {
+                                        handleStart(ctx.source, anchor, null)
+                                    } else {
+                                        ctx.source.sendSystemMessage(
+                                            Component
+                                                .translatable(
+                                                    "exservermod.waves.error.island_only",
+                                                    NightmareIslandManager.ISLAND_CENTER_X.toInt(),
+                                                    NightmareIslandManager.ISLAND_CENTER_Z.toInt(),
+                                                ).withStyle(ChatFormatting.RED),
+                                        )
+                                    }
                                 }
                                 1
                             }.then(
@@ -54,7 +78,21 @@ class WaveCommands(
                                         val player = ctx.source.player
                                         val landmark = StringArgumentType.getString(ctx, "landmark")
                                         if (player != null) {
-                                            handleStart(player, landmark)
+                                            handleStart(ctx.source, player, landmark)
+                                        } else {
+                                            val anchor = findConsoleAnchor(ctx.source)
+                                            if (anchor != null) {
+                                                handleStart(ctx.source, anchor, landmark)
+                                            } else {
+                                                ctx.source.sendSystemMessage(
+                                                    Component
+                                                        .translatable(
+                                                            "exservermod.waves.error.island_only",
+                                                            NightmareIslandManager.ISLAND_CENTER_X.toInt(),
+                                                            NightmareIslandManager.ISLAND_CENTER_Z.toInt(),
+                                                        ).withStyle(ChatFormatting.RED),
+                                                )
+                                            }
                                         }
                                         1
                                     },
@@ -63,20 +101,49 @@ class WaveCommands(
                         Commands
                             .literal("stop")
                             .executes { ctx ->
-                                val player = ctx.source.player
-                                if (player != null) {
-                                    handleStop(player)
-                                }
+                                handleStop(ctx.source)
                                 1
                             },
                     ).then(
                         Commands
-                            .literal("status")
+                            .literal("reward")
+                            .requires { isOp(it) }
                             .executes { ctx ->
                                 val player = ctx.source.player
                                 if (player != null) {
-                                    showStatus(player)
+                                    ExServerMod.waveManager.giveDefenderVictoryRewards(ctx.source.server, player)
+                                    ctx.source.sendSystemMessage(
+                                        Component
+                                            .translatable("exservermod.waves.reward.granted", player.name.string)
+                                            .withStyle(ChatFormatting.GREEN),
+                                    )
+                                } else {
+                                    ctx.source.sendSystemMessage(
+                                        Component
+                                            .translatable("exservermod.waves.reward.specify_player")
+                                            .withStyle(ChatFormatting.RED),
+                                    )
                                 }
+                                1
+                            }.then(
+                                Commands
+                                    .argument("player", EntityArgument.player())
+                                    .executes { ctx ->
+                                        val target = EntityArgument.getPlayer(ctx, "player")
+                                        ExServerMod.waveManager.giveDefenderVictoryRewards(ctx.source.server, target)
+                                        ctx.source.sendSystemMessage(
+                                            Component
+                                                .translatable("exservermod.waves.reward.granted", target.name.string)
+                                                .withStyle(ChatFormatting.GREEN),
+                                        )
+                                        1
+                                    },
+                            ),
+                    ).then(
+                        Commands
+                            .literal("status")
+                            .executes { ctx ->
+                                showStatus(ctx.source)
                                 1
                             },
                     ).then(
@@ -150,47 +217,57 @@ class WaveCommands(
         }
     }
 
-    private fun showStatus(player: ServerPlayer) {
+    private fun showStatus(source: CommandSourceStack) {
+        val player = source.player
         val game = ExServerMod.waveManager
-        if (!game.isRunning()) {
-            val startBtn =
-                Component.translatable("exservermod.waves.button.start").withStyle { style ->
-                    style
-                        .withColor(ChatFormatting.GREEN)
-                        .withClickEvent(ClickEvent.RunCommand("/waves start"))
-                        .withHoverEvent(HoverEvent.ShowText(Component.translatable("exservermod.waves.button.start.hover")))
-                }
-            player.sendSystemMessage(
-                Component
-                    .translatable("exservermod.waves.idle_intro")
-                    .withStyle(ChatFormatting.AQUA)
-                    .append(" ")
-                    .append(startBtn),
-            )
-            player.sendSystemMessage(
-                Component.translatable("exservermod.waves.rules").withStyle(ChatFormatting.GRAY),
-            )
+        if (player != null) {
+            if (!game.isRunning()) {
+                val startBtn =
+                    Component.translatable("exservermod.waves.button.start").withStyle { style ->
+                        style
+                            .withColor(ChatFormatting.GREEN)
+                            .withClickEvent(ClickEvent.RunCommand("/waves start"))
+                            .withHoverEvent(HoverEvent.ShowText(Component.translatable("exservermod.waves.button.start.hover")))
+                    }
+                player.sendSystemMessage(
+                    Component
+                        .translatable("exservermod.waves.idle_intro")
+                        .withStyle(ChatFormatting.AQUA)
+                        .append(" ")
+                        .append(startBtn),
+                )
+                player.sendSystemMessage(
+                    Component.translatable("exservermod.waves.rules").withStyle(ChatFormatting.GRAY),
+                )
+            } else {
+                player.sendSystemMessage(game.statusLine())
+                val stopBtn =
+                    Component.translatable("exservermod.waves.button.stop").withStyle { style ->
+                        style
+                            .withColor(ChatFormatting.RED)
+                            .withClickEvent(ClickEvent.RunCommand("/waves stop"))
+                            .withHoverEvent(HoverEvent.ShowText(Component.translatable("exservermod.waves.button.stop.hover")))
+                    }
+                player.sendSystemMessage(stopBtn)
+            }
         } else {
-            player.sendSystemMessage(game.statusLine())
-            val stopBtn =
-                Component.translatable("exservermod.waves.button.stop").withStyle { style ->
-                    style
-                        .withColor(ChatFormatting.RED)
-                        .withClickEvent(ClickEvent.RunCommand("/waves stop"))
-                        .withHoverEvent(HoverEvent.ShowText(Component.translatable("exservermod.waves.button.stop.hover")))
-                }
-            player.sendSystemMessage(stopBtn)
+            if (!game.isRunning()) {
+                source.sendSystemMessage(Component.translatable("exservermod.waves.idle_intro").withStyle(ChatFormatting.AQUA))
+            } else {
+                source.sendSystemMessage(game.statusLine())
+            }
         }
     }
 
     private fun handleStart(
+        source: CommandSourceStack,
         player: ServerPlayer,
         landmarkName: String?,
     ) {
-        val server = player.level().server
+        val server = source.server
 
         if (ExServerMod.game.isGameActive() || ExServerMod.game.phase == GamePhase.INTERMISSION) {
-            player.sendSystemMessage(
+            source.sendSystemMessage(
                 Component.translatable("exservermod.waves.error.hideandseek_running").withStyle(ChatFormatting.RED),
             )
             return
@@ -199,7 +276,7 @@ class WaveCommands(
         // AFK bot Steve is excluded from wave defense
         val defenders = server.playerList.players.filter { !AfkManager.isBotPlayer(it) }
         if (defenders.isEmpty()) {
-            player.sendSystemMessage(
+            source.sendSystemMessage(
                 Component.translatable("exservermod.waves.error.no_defenders").withStyle(ChatFormatting.RED),
             )
             return
@@ -218,7 +295,7 @@ class WaveCommands(
         if (level.dimension() != Level.OVERWORLD ||
             !NightmareIslandManager.isLocationOnIsland(player.x, player.z)
         ) {
-            player.sendSystemMessage(
+            source.sendSystemMessage(
                 Component
                     .translatable(
                         "exservermod.waves.error.island_only",
@@ -233,7 +310,7 @@ class WaveCommands(
             val clean = landmarkName.trim().removeSurrounding("\"")
             val lm = landmarkManager.getLandmark(clean)
             if (lm == null) {
-                player.sendSystemMessage(
+                source.sendSystemMessage(
                     Component.translatable("exservermod.afk.landmark_not_found", clean).withStyle(ChatFormatting.RED),
                 )
                 return
@@ -255,7 +332,7 @@ class WaveCommands(
         }
 
         if (!ExServerMod.waveManager.tryStart(player, defenders, arenaPos)) {
-            player.sendSystemMessage(
+            source.sendSystemMessage(
                 Component.translatable("exservermod.waves.error.already_running").withStyle(ChatFormatting.RED),
             )
             return
@@ -299,11 +376,11 @@ class WaveCommands(
         game.triggerLocateBell(player)
     }
 
-    private fun handleStop(player: ServerPlayer) {
-        val server = player.level().server
+    private fun handleStop(source: CommandSourceStack) {
+        val server = source.server
 
         if (!ExServerMod.waveManager.tryStop(server)) {
-            player.sendSystemMessage(
+            source.sendSystemMessage(
                 Component.translatable("exservermod.waves.error.not_running").withStyle(ChatFormatting.RED),
             )
             return
@@ -316,12 +393,13 @@ class WaveCommands(
                     .withClickEvent(ClickEvent.RunCommand("/waves start"))
                     .withHoverEvent(HoverEvent.ShowText(Component.translatable("exservermod.waves.button.start.hover")))
             }
+        val stoppedMsg =
+            source.player?.let { p ->
+                Component.translatable("exservermod.waves.stopped_by", p.name).withStyle(ChatFormatting.GRAY)
+            } ?: Component.translatable("exservermod.waves.stopped_generic").withStyle(ChatFormatting.GRAY)
+
         server.playerList.broadcastSystemMessage(
-            Component
-                .translatable("exservermod.waves.stopped_by", player.name)
-                .withStyle(ChatFormatting.GRAY)
-                .append(" ")
-                .append(startBtn),
+            stoppedMsg.append(" ").append(startBtn),
             false,
         )
     }

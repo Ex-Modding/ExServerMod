@@ -311,5 +311,7 @@
   "exservermod.waves.horseman_lantern.name": "🎃 Маска Всадника",
   "exservermod.waves.horseman_lantern.lore1": "Проклятый светильник безголового всадника.",
   "exservermod.waves.horseman_lantern.lore2": "Надевается в слот шлема: постоянное Ночное зрение.",
-  "exservermod.waves.horseman_lantern.lore3": "Защита IV от потусторонней тьмы."
+  "exservermod.waves.horseman_lantern.lore3": "Защита IV от потусторонней тьмы.",
+  "exservermod.waves.reward.granted": "[Волны] Награды за победу выданы игроку %s!",
+  "exservermod.waves.reward.specify_player": "[Волны] Укажите игрока для выдачи награды!"
 }

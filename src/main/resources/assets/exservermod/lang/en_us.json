@@ -311,5 +311,7 @@
   "exservermod.waves.horseman_lantern.name": "🎃 Headless Horseman's Lantern",
   "exservermod.waves.horseman_lantern.lore1": "The cursed Jack o'Lantern of the Headless Horseman.",
   "exservermod.waves.horseman_lantern.lore2": "Equippable in helmet slot: grants permanent Night Vision.",
-  "exservermod.waves.horseman_lantern.lore3": "Protection IV against the otherworldly darkness."
+  "exservermod.waves.horseman_lantern.lore3": "Protection IV against the otherworldly darkness.",
+  "exservermod.waves.reward.granted": "[Waves] Victory rewards granted to %s!",
+  "exservermod.waves.reward.specify_player": "[Waves] Please specify a player to reward!"
 }
