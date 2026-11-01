@@ -16,6 +16,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
@@ -173,6 +174,9 @@ class HalloweenEvent(
         ServerTickEvents.END_SERVER_TICK.register { server ->
             if (server.tickCount % 600 == 0) {
                 balanceManager?.saveIfDirty(sync = false)
+            }
+            if (!config.enabled && phase == HalloweenPhase.IDLE) {
+                return@register
             }
             when (phase) {
                 HalloweenPhase.IDLE -> {
@@ -886,11 +890,40 @@ class HalloweenEvent(
     }
 
     private fun registerServerLifecycle() {
+        ServerLifecycleEvents.SERVER_STARTED.register { server ->
+            purgeLingeringEventEntities(server)
+        }
+
+        ServerEntityEvents.ENTITY_LOAD.register { entity, _ ->
+            if (phase == HalloweenPhase.IDLE) {
+                if (entity is CandyEntity || entity is HalloweenMerchantEntity || entity is BloodZombieEntity || entity is DemonEyeEntity) {
+                    entity.discard()
+                }
+            }
+        }
+
         ServerLifecycleEvents.SERVER_STOPPING.register { server ->
             clearCandies()
             clearBloodMobs(server)
+            purgeLingeringEventEntities(server)
             balanceManager?.save()
             savePlayerPets()
+        }
+    }
+
+    fun purgeLingeringEventEntities(server: MinecraftServer) {
+        val merchantUuid = spawnedMerchantUuid
+        if (merchantUuid != null) {
+            val merchant = server.overworld().getEntity(merchantUuid)
+            merchant?.discard()
+            spawnedMerchantUuid = null
+        }
+        for (lvl in server.allLevels) {
+            for (entity in lvl.allEntities.toList()) {
+                if (entity is CandyEntity || entity is HalloweenMerchantEntity || entity is BloodZombieEntity || entity is DemonEyeEntity) {
+                    entity.discard()
+                }
+            }
         }
     }
 }

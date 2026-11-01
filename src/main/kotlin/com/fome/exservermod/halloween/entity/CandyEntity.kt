@@ -1,6 +1,7 @@
 package com.fome.exservermod.halloween.entity
 
 import com.fome.exservermod.halloween.HalloweenEvent
+import com.fome.exservermod.halloween.HalloweenPhase
 import com.fome.exservermod.halloween.item.CandyPouchItem
 import net.minecraft.ChatFormatting
 import net.minecraft.core.particles.ParticleTypes
@@ -58,6 +59,8 @@ class CandyEntity(
         // No client-synced custom variables needed; client interpolates rotation via tickCount
     }
 
+    override fun shouldBeSaved(): Boolean = false
+
     override fun readAdditionalSaveData(input: ValueInput) {
         channelProgressTicks = input.getIntOr("ChannelProgress", 0)
     }
@@ -68,6 +71,11 @@ class CandyEntity(
 
     override fun tick() {
         super.tick()
+
+        if (HalloweenEvent.instance?.phase != HalloweenPhase.ACTIVE_GATHERING) {
+            discard()
+            return
+        }
 
         val sLevel = level() as? ServerLevel ?: return
 

@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import java.io.File
 
 data class HalloweenConfig(
+    val enabled: Boolean = false,
     val eventCooldownSeconds: Int = 90 * 60, // 1.5 hours
     val eventDurationSeconds: Int = 10 * 60, // 10 minutes
     val merchantGraceSeconds: Int = 5 * 60, // 5 minutes after candy gathering

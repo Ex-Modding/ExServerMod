@@ -133,8 +133,14 @@ class DemonEyeEntity(
         return hit
     }
 
+    override fun shouldBeSaved(): Boolean = false
+
     override fun tick() {
         super.tick()
+        if (HalloweenEvent.instance?.phase == HalloweenPhase.IDLE) {
+            discard()
+            return
+        }
         isNoGravity = true
 
         val sLevel = level() as? ServerLevel ?: return

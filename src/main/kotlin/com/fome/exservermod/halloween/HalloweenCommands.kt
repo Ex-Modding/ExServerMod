@@ -62,6 +62,19 @@ class HalloweenCommands(
                             },
                     ).then(
                         Commands
+                            .literal("clearall")
+                            .requires { isOp(it) }
+                            .executes { ctx ->
+                                val server = ctx.source.server
+                                event.purgeLingeringEventEntities(server)
+                                ctx.source.sendSuccess(
+                                    { Component.literal("All lingering Halloween entities (candies, merchants, blood mobs) cleared.") },
+                                    true,
+                                )
+                                1
+                            },
+                    ).then(
+                        Commands
                             .literal("spawnmerchant")
                             .requires { isOp(it) }
                             .executes { ctx ->

@@ -1,6 +1,7 @@
 package com.fome.exservermod.halloween.entity
 
 import com.fome.exservermod.halloween.HalloweenEvent
+import com.fome.exservermod.halloween.HalloweenPhase
 import com.fome.exservermod.halloween.network.OpenMerchantGuiPayload
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.network.chat.Component
@@ -50,8 +51,14 @@ class HalloweenMerchantEntity(
         goalSelector.addGoal(2, RandomLookAroundGoal(this))
     }
 
+    override fun shouldBeSaved(): Boolean = false
+
     override fun aiStep() {
         super.aiStep()
+        if (HalloweenEvent.instance?.phase == HalloweenPhase.IDLE) {
+            discard()
+            return
+        }
         despawnDelay = -1 // Prevent automatic despawn
         if (!hasEffect(MobEffects.GLOWING)) {
             addEffect(MobEffectInstance(MobEffects.GLOWING, MobEffectInstance.INFINITE_DURATION, 0, false, false, false))

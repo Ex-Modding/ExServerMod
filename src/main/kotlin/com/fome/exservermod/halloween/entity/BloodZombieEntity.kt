@@ -24,6 +24,8 @@ class BloodZombieEntity(
 ) : Zombie(type, level) {
     override fun isSunSensitive(): Boolean = false
 
+    override fun shouldBeSaved(): Boolean = false
+
     override fun hurtServer(
         serverLevel: ServerLevel,
         damageSource: DamageSource,
@@ -39,6 +41,10 @@ class BloodZombieEntity(
 
     override fun tick() {
         super.tick()
+        if (HalloweenEvent.instance?.phase == HalloweenPhase.IDLE) {
+            discard()
+            return
+        }
         val sLevel = level() as? ServerLevel ?: return
         if (tickCount % 6 == 0) {
             val bloodOption = BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState())
