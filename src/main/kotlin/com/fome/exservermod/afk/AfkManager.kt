@@ -39,7 +39,7 @@ object AfkManager {
 
     fun isBotOnline(server: MinecraftServer): Boolean = findBot(server) != null
 
-    private fun resolveLevel(
+    fun resolveLevel(
         server: MinecraftServer,
         dimension: String,
     ): ServerLevel? {

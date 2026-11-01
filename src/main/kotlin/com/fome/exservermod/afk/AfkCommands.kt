@@ -273,14 +273,15 @@ class AfkCommands(
             }
 
         if (landmark != null) {
-            val level = server.overworld()
+            val level = AfkManager.resolveLevel(server, landmark.dimension) ?: server.overworld()
             val pos = AfkManager.findSafeSurface(level, landmark.x, landmark.z)
             if (pos == null) {
                 source.sendSuccess({ Component.translatable("exservermod.afk.unsafe_spot").withStyle(ChatFormatting.RED) }, false)
                 return
             }
 
-            val command = "player ${AfkManager.BOT_NAME} spawn at ${pos.x + 0.5} ${pos.y} ${pos.z + 0.5}"
+            val inDimension = if (landmark.dimension != "minecraft:overworld") " in ${landmark.dimension}" else ""
+            val command = "player ${AfkManager.BOT_NAME} spawn at ${pos.x + 0.5} ${pos.y} ${pos.z + 0.5}$inDimension"
             val executed =
                 try {
                     server.commands.performPrefixedCommand(
