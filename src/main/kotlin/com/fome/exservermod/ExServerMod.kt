@@ -85,7 +85,9 @@ object ExServerMod : ModInitializer {
         GameEventHandler(game, landmarkManager, disguiseManager).register()
         GameCommands(game, disguiseManager, landmarkManager).register()
         LandmarkCommands(landmarkManager).register()
-        AfkCommands(landmarkManager).register()
+        if (!FabricLoader.getInstance().isModLoaded("exserverafk")) {
+            AfkCommands(landmarkManager).register()
+        }
         WaveCommands(landmarkManager).register()
         waveManager.register()
 
